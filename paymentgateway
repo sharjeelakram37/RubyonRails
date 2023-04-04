@@ -1,0 +1,40 @@
+gem 'stripe'
+
+# config/initializers/stripe.rb
+Rails.configuration.stripe = {
+  publishable_key: ENV['STRIPE_PUBLISHABLE_KEY'],
+  secret_key: ENV['STRIPE_SECRET_KEY']
+}
+Stripe.api_key = Rails.configuration.stripe[:secret_key]
+
+# app/controllers/payments_controller.rb
+class PaymentsController < ApplicationController
+  def new
+  end
+
+  def create
+    # Use the Stripe gem to process the payment
+    amount = params[:amount]
+    token = params[:stripeToken]
+    charge = Stripe::Charge.create(
+      amount: amount,
+      currency: 'usd',
+      source: token
+    )
+
+    # Handle the payment success or failure
+    if charge.paid
+      flash[:success] = "Payment successful"
+    else
+      flash[:error] = "Payment failed"
+    end
+    redirect_to root_path
+  rescue Stripe::CardError => e
+    flash[:error] = e.message
+    redirect_to new_payment_path
+  end
+end
+
+# config/routes.rb
+Rails.application.routes.draw do
+  resources :payments, only: [:new,
